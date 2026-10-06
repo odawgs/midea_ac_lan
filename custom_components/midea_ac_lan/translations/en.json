@@ -658,6 +658,24 @@
       }
     },
     "sensor": {
+      "hpwh_tank_temp_1": {
+        "name": "Tank Temperature Sensor 1"
+      },
+      "hpwh_tank_temp_2": {
+        "name": "Tank Temperature Sensor 2"
+      },
+      "hpwh_input_power": {
+        "name": "Input Power"
+      },
+      "hpwh_energy_counter": {
+        "name": "Energy Counter"
+      },
+      "hpwh_eheater_on_temp": {
+        "name": "E-heater On Temperature"
+      },
+      "hpwh_disinfect_hour": {
+        "name": "Disinfection Hour"
+      },
       "three_way_mode": {
         "name": "Three-way Mode"
       },

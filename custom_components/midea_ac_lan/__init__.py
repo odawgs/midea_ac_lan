@@ -49,6 +49,8 @@ from .const import (
     EXTRA_SWITCH,
     supports_device,
 )
+from .hpwh import install as install_split_hpwh
+from .hpwh import is_split_hpwh
 from .midea_devices import MIDEA_DEVICES
 
 _LOGGER = logging.getLogger(__name__)
@@ -294,6 +296,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             serial_number=serial_number,
         )
     if device:
+        if is_split_hpwh(device):
+            install_split_hpwh(device)
         if refresh_interval is not None:
             device.set_refresh_interval(refresh_interval)
         device.open()

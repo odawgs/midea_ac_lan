@@ -1,6 +1,6 @@
 """Devices configuration for Midea Lan."""
 
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.number import NumberDeviceClass
@@ -81,6 +81,16 @@ from midealan.devices.fd import DeviceAttributes as FDAttributes
 from midealan.devices.x26 import DeviceAttributes as X26Attributes
 from midealan.devices.x34 import DeviceAttributes as X34Attributes
 from midealan.devices.x40 import DeviceAttributes as X40Attributes
+
+from .hpwh import (
+    HPWH_DISINFECT_HOUR,
+    HPWH_EHEATER_ON_TEMP,
+    HPWH_ENERGY_COUNTER,
+    HPWH_INPUT_POWER,
+    HPWH_TANK_TEMP_1,
+    HPWH_TANK_TEMP_2,
+    SPLIT_HPWH_MODELS,
+)
 
 FRESH_AIR_EXHAUST = "fresh_air_exhaust"
 FRESH_AIR_EXHAUST_MODE = "fresh_air_exhaust_mode"
@@ -5768,3 +5778,72 @@ MIDEA_DEVICES: dict[int, dict[str, dict[str, Any] | str]] = {
         },
     },
 }
+
+
+# Split heat pump water heaters that report as C3 (see hpwh.py). Only the
+# water heater and the HPWH sensors below apply; hide the air-to-water entities.
+_C3_ENTITIES = cast("dict[str, dict[str, Any]]", MIDEA_DEVICES[0xC3]["entities"])
+_C3_SPLIT_HPWH_KEEP = {"water_heater"}
+for _key, _config in _C3_ENTITIES.items():
+    if _key not in _C3_SPLIT_HPWH_KEEP:
+        _config["excluded_devices"] = [
+            *_config.get("excluded_devices", []),
+            *((model, 0) for model in SPLIT_HPWH_MODELS),
+        ]
+_C3_ENTITIES.update(
+    {
+        HPWH_TANK_TEMP_1: {
+            "type": Platform.SENSOR,
+            "translation_key": "hpwh_tank_temp_1",
+            "name": "Tank Temperature Sensor 1",
+            "device_class": SensorDeviceClass.TEMPERATURE,
+            "unit": UnitOfTemperature.CELSIUS,
+            "state_class": SensorStateClass.MEASUREMENT,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_TANK_TEMP_2: {
+            "type": Platform.SENSOR,
+            "translation_key": "hpwh_tank_temp_2",
+            "name": "Tank Temperature Sensor 2",
+            "device_class": SensorDeviceClass.TEMPERATURE,
+            "unit": UnitOfTemperature.CELSIUS,
+            "state_class": SensorStateClass.MEASUREMENT,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_INPUT_POWER: {
+            "type": Platform.SENSOR,
+            "translation_key": "hpwh_input_power",
+            "name": "Input Power",
+            "device_class": SensorDeviceClass.POWER,
+            "unit": UnitOfPower.WATT,
+            "state_class": SensorStateClass.MEASUREMENT,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_ENERGY_COUNTER: {
+            "type": Platform.SENSOR,
+            "translation_key": "hpwh_energy_counter",
+            "name": "Energy Counter",
+            "device_class": SensorDeviceClass.ENERGY,
+            "unit": UnitOfEnergy.KILO_WATT_HOUR,
+            "state_class": SensorStateClass.TOTAL_INCREASING,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_EHEATER_ON_TEMP: {
+            "type": Platform.SENSOR,
+            "translation_key": "hpwh_eheater_on_temp",
+            "name": "E-heater On Temperature",
+            "device_class": SensorDeviceClass.TEMPERATURE,
+            "unit": UnitOfTemperature.CELSIUS,
+            "entity_category": EntityCategory.DIAGNOSTIC,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_DISINFECT_HOUR: {
+            "type": Platform.SENSOR,
+            "translation_key": "hpwh_disinfect_hour",
+            "name": "Disinfection Hour",
+            "icon": "mdi:water-plus-outline",
+            "entity_category": EntityCategory.DIAGNOSTIC,
+            "models": SPLIT_HPWH_MODELS,
+        },
+    },
+)
