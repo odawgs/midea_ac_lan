@@ -300,7 +300,11 @@ def _decode_basic(body: bytes) -> dict[str, Any]:
         HPWH_EHEATER_ON_TEMP: _temp(body[18]),
         HPWH_RESTART_OFFSET: _temp(body[19]),
         HPWH_DISINFECT_HOUR: body[20],
-        HPWH_DISINFECT_TEMP: _temp(body[22]),
+        # The app shows the stored value capped at the set point maximum
+        # (a new unit stores 63 with a 60 maximum); mirror that so the number
+        # entity never sits above its own range. Control frames echo the raw
+        # byte from the settings cache, not this value.
+        HPWH_DISINFECT_TEMP: min(_temp(body[22]), _temp(body[4])),
         HPWH_DISINFECT_CYCLE: body[23],
         HPWH_AUX_HEATER: bool(switches & _SW_AUX_HEATER),
         HPWH_DISINFECT_NOW: bool(switches & _SW_DISINFECT_NOW),
@@ -411,6 +415,12 @@ class SplitHPWHController:
                 self._mute_level = body[41]
                 self._mute_force_heat = body[42] & 0x03
         new_status = decode_frame(msg)
+        if HPWH_DISINFECT_TEMP in new_status and self._last_basic is not None:
+            # Control echoes carry no range; apply the same cap as the status.
+            new_status[HPWH_DISINFECT_TEMP] = min(
+                new_status[HPWH_DISINFECT_TEMP],
+                _temp(self._last_basic[4]),
+            )
         self._attributes.update(new_status)
         return {str(attr): value for attr, value in new_status.items()}
 
