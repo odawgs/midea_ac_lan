@@ -41,7 +41,15 @@ work temp limit, [19..24] clock set (0 = leave alone), rest 0.
 Report body 0x0D (unsolicited and queryable): [7..8] tank upper temp 0.1 °C,
 [9..10] second tank probe 0.1 °C, [17..18] e-heater current 0.1 A,
 [19..20] input power W, [21..24] e-heater energy 0.01 kWh,
-[25..28] compressor energy 0.01 kWh.
+[25..28] compressor energy 0.01 kWh, [29..30] e-heater last 24 h 0.01 kWh,
+[31..32] compressor last 24 h 0.01 kWh (observed; the codec reads [41..42]).
+
+Run parameter body 0x02 (query reply): [4..5] e-heater run hours,
+[15] module temp Tf, [16] discharge temp Tp, [17] suction temp Th (raw °C),
+[21] coil temp T3 + 35, [22] ambient temp T4 + 35, [28] supply current A,
+[29..30] supply voltage V, [31] DC bus current A, [32..40] indoor / outdoor /
+controller software versions (3 bytes each), [41] mute level, [42] mute 0x01 |
+force heat 0x02, [43..44] DC bus voltage V.
 """
 
 from __future__ import annotations
@@ -72,10 +80,29 @@ HPWH_COMPRESSOR_ENERGY = "hpwh_compressor_energy"
 HPWH_COMPRESSOR_FREQUENCY = "hpwh_compressor_frequency"
 HPWH_COMPRESSOR_HOURS = "hpwh_compressor_hours"
 HPWH_RUN_MODE = "hpwh_run_mode"
+HPWH_FAN_SPEED = "hpwh_fan_speed"
+HPWH_EXV_OPENING = "hpwh_exv_opening"
+HPWH_EHEATER_HOURS = "hpwh_eheater_hours"
+HPWH_AMBIENT_TEMP = "hpwh_ambient_temp"
+HPWH_COIL_TEMP = "hpwh_coil_temp"
+HPWH_DISCHARGE_TEMP = "hpwh_discharge_temp"
+HPWH_SUCTION_TEMP = "hpwh_suction_temp"
+HPWH_MODULE_TEMP = "hpwh_module_temp"
+HPWH_SUPPLY_VOLTAGE = "hpwh_supply_voltage"
+HPWH_SUPPLY_CURRENT = "hpwh_supply_current"
+HPWH_DC_BUS_VOLTAGE = "hpwh_dc_bus_voltage"
+HPWH_DC_BUS_CURRENT = "hpwh_dc_bus_current"
+HPWH_EHEATER_ENERGY_24H = "hpwh_eheater_energy_24h"
+HPWH_COMPRESSOR_ENERGY_24H = "hpwh_compressor_energy_24h"
+HPWH_IDU_VERSION = "hpwh_idu_version"
+HPWH_ODU_VERSION = "hpwh_odu_version"
+HPWH_HMI_VERSION = "hpwh_hmi_version"
 # Binary states
 HPWH_EHEATER_RUNNING = "hpwh_eheater_running"
 HPWH_COMPRESSOR_RUNNING = "hpwh_compressor_running"
 HPWH_DISINFECT_RUNNING = "hpwh_disinfect_running"
+HPWH_MUTE = "hpwh_mute"
+HPWH_FORCE_HEAT = "hpwh_force_heat"
 # Writable settings (numbers)
 HPWH_EHEATER_ON_TEMP = "hpwh_eheater_on_temp"
 HPWH_RESTART_OFFSET = "hpwh_restart_offset"
@@ -104,6 +131,25 @@ HPWH_ATTRIBUTES = [
     HPWH_COMPRESSOR_FREQUENCY,
     HPWH_COMPRESSOR_HOURS,
     HPWH_RUN_MODE,
+    HPWH_FAN_SPEED,
+    HPWH_EXV_OPENING,
+    HPWH_EHEATER_HOURS,
+    HPWH_AMBIENT_TEMP,
+    HPWH_COIL_TEMP,
+    HPWH_DISCHARGE_TEMP,
+    HPWH_SUCTION_TEMP,
+    HPWH_MODULE_TEMP,
+    HPWH_SUPPLY_VOLTAGE,
+    HPWH_SUPPLY_CURRENT,
+    HPWH_DC_BUS_VOLTAGE,
+    HPWH_DC_BUS_CURRENT,
+    HPWH_EHEATER_ENERGY_24H,
+    HPWH_COMPRESSOR_ENERGY_24H,
+    HPWH_IDU_VERSION,
+    HPWH_ODU_VERSION,
+    HPWH_HMI_VERSION,
+    HPWH_MUTE,
+    HPWH_FORCE_HEAT,
     HPWH_EHEATER_RUNNING,
     HPWH_COMPRESSOR_RUNNING,
     HPWH_DISINFECT_RUNNING,
@@ -134,8 +180,11 @@ _MODE_OFF = 0x00
 _MODE_DHW = 0x02
 _BASIC_MIN_LEN = 48
 _CONTROL_ECHO_MIN_LEN = 19
-_RUNPARA1_MIN_LEN = 43
-_SENSORS_MIN_LEN = 29
+_RUNPARA1_MIN_LEN = 47
+_SENSORS_MIN_LEN = 33
+_RUNPARA1_MUTE = 0x01
+_RUNPARA1_FORCE_HEAT = 0x02
+_RUNPARA1_FLAGS = _RUNPARA1_MUTE | _RUNPARA1_FORCE_HEAT
 _CONTROL_BODY_LEN = 51
 # Status byte [16]
 _STA_DISINFECT = 0x01
@@ -275,6 +324,12 @@ def decode_frame(msg: bytes) -> dict[str, Any]:
         return _decode_basic(body)
     if body_type == _BODY_SENSORS and len(body) >= _SENSORS_MIN_LEN:
         return _decode_sensors(body)
+    if (
+        body_type == _BODY_RUNPARA1
+        and msg_type != MessageType.set
+        and len(body) >= _RUNPARA1_MIN_LEN
+    ):
+        return _decode_runpara1(body)
     return {}
 
 
@@ -309,6 +364,8 @@ def _decode_basic(body: bytes) -> dict[str, Any]:
         HPWH_AUX_HEATER: bool(switches & _SW_AUX_HEATER),
         HPWH_DISINFECT_NOW: bool(switches & _SW_DISINFECT_NOW),
         HPWH_AUTO_DISINFECT: bool(switches & _SW_AUTO_DISINFECT),
+        HPWH_FAN_SPEED: _u16(body, 32),
+        HPWH_EXV_OPENING: _u16(body, 36),
         HPWH_RUN_MODE: body[42],
         HPWH_COMPRESSOR_FREQUENCY: body[43],
         # 16-bit, so it wraps; total_increasing treats the wrap as a reset.
@@ -351,7 +408,70 @@ def _decode_sensors(body: bytes) -> dict[str, Any]:
         HPWH_INPUT_POWER: _u16(body, 19),
         HPWH_EHEATER_ENERGY: round(_u32(body, 21) / 100, 2),
         HPWH_COMPRESSOR_ENERGY: round(_u32(body, 25) / 100, 2),
+        # [29..30] is the codec's eheat_24h_kwh. The codec reads comp_24h_kwh
+        # at [41..42], which is always 0 on this unit, while [31..32] tracks
+        # the compressor's day (3.94 kWh after a day's heating, 0.17 kWh after
+        # 11 minutes at 1.1 kW), so that is what is reported here.
+        HPWH_EHEATER_ENERGY_24H: round(_u16(body, 29) / 100, 2),
+        HPWH_COMPRESSOR_ENERGY_24H: round(_u16(body, 31) / 100, 2),
         C3Attributes.tank_actual_temperature: tank_upper,
+    }
+
+
+def _temp_or_none(raw: int) -> float | None:
+    """Return a +35 encoded temperature, or None for a probe that reads 0.
+
+    Returns
+    -------
+    The temperature in °C, or None.
+
+    """
+    return None if raw == 0 else _temp(raw)
+
+
+def _version(body: bytes, offset: int) -> str:
+    """Return a codec version triple ``YYYY-MM-DD v<n>`` from three bytes.
+
+    Returns
+    -------
+    The version string.
+
+    """
+    year = 2000 + (body[offset] >> 1)
+    month = ((body[offset] & 0x01) << 3) | (body[offset + 1] >> 5)
+    day = body[offset + 1] & 0x1F
+    return f"{year:04d}-{month:02d}-{day:02d} v{body[offset + 2]}"
+
+
+def _decode_runpara1(body: bytes) -> dict[str, Any]:
+    """Decode the run parameter reply (body type 0x02).
+
+    Single-byte temperatures T3 and T4 carry the +35 offset like the codec;
+    Tf, Tp and Th are raw degrees, as the codec and ``midealan`` treat them.
+    Fields that always read 0 on the 171000AU (water-side temperatures,
+    pressures, flow, heat output, other run hours) are not reported.
+
+    Returns
+    -------
+    The run parameter attributes.
+
+    """
+    return {
+        HPWH_EHEATER_HOURS: _u16(body, 4),
+        HPWH_MODULE_TEMP: body[15],
+        HPWH_DISCHARGE_TEMP: body[16],
+        HPWH_SUCTION_TEMP: body[17],
+        HPWH_COIL_TEMP: _temp_or_none(body[21]),
+        HPWH_AMBIENT_TEMP: _temp_or_none(body[22]),
+        HPWH_SUPPLY_CURRENT: body[28],
+        HPWH_SUPPLY_VOLTAGE: _u16(body, 29),
+        HPWH_DC_BUS_CURRENT: body[31],
+        HPWH_IDU_VERSION: _version(body, 32),
+        HPWH_ODU_VERSION: _version(body, 35),
+        HPWH_HMI_VERSION: _version(body, 38),
+        HPWH_MUTE: bool(body[42] & _RUNPARA1_MUTE),
+        HPWH_FORCE_HEAT: bool(body[42] & _RUNPARA1_FORCE_HEAT),
+        HPWH_DC_BUS_VOLTAGE: _u16(body, 43),
     }
 
 
@@ -413,7 +533,9 @@ class SplitHPWHController:
                 self._settings[2:19] = body[2:19]
             elif body[0] == _BODY_RUNPARA1 and len(body) >= _RUNPARA1_MIN_LEN:
                 self._mute_level = body[41]
-                self._mute_force_heat = body[42] & 0x03
+                self._mute_force_heat = body[42] & (
+                    _RUNPARA1_MUTE | _RUNPARA1_FORCE_HEAT
+                )
         new_status = decode_frame(msg)
         if HPWH_DISINFECT_TEMP in new_status and self._last_basic is not None:
             # Control echoes carry no range; apply the same cap as the status.

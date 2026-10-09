@@ -66,6 +66,8 @@
       "hpwh_eheater_running": { "name": "E-heater Running" },
       "hpwh_compressor_running": { "name": "Compressor Running" },
       "hpwh_disinfect_running": { "name": "Disinfection Running" },
+      "hpwh_mute": { "name": "Quiet Mode" },
+      "hpwh_force_heat": { "name": "Force Heat" },
       "warm_power": {
         "name": "Warm Power"
       },
@@ -682,6 +684,23 @@
       "hpwh_eheater_current": { "name": "E-heater Current" },
       "hpwh_compressor_frequency": { "name": "Compressor Frequency" },
       "hpwh_compressor_hours": { "name": "Compressor Run Hours" },
+      "hpwh_ambient_temp": { "name": "Ambient Temperature" },
+      "hpwh_eheater_energy_24h": { "name": "E-heater Energy 24h" },
+      "hpwh_compressor_energy_24h": { "name": "Compressor Energy 24h" },
+      "hpwh_eheater_hours": { "name": "E-heater Run Hours" },
+      "hpwh_coil_temp": { "name": "Outdoor Coil Temperature" },
+      "hpwh_discharge_temp": { "name": "Compressor Discharge Temperature" },
+      "hpwh_suction_temp": { "name": "Compressor Suction Temperature" },
+      "hpwh_module_temp": { "name": "Inverter Module Temperature" },
+      "hpwh_supply_voltage": { "name": "Supply Voltage" },
+      "hpwh_supply_current": { "name": "Supply Current" },
+      "hpwh_dc_bus_voltage": { "name": "DC Bus Voltage" },
+      "hpwh_dc_bus_current": { "name": "DC Bus Current" },
+      "hpwh_fan_speed": { "name": "Outdoor Fan Speed" },
+      "hpwh_exv_opening": { "name": "Expansion Valve Opening" },
+      "hpwh_idu_version": { "name": "Indoor Unit Software" },
+      "hpwh_odu_version": { "name": "Outdoor Unit Software" },
+      "hpwh_hmi_version": { "name": "Controller Software" },
       "hpwh_tank_temp_1": {
         "name": "Tank Temperature Upper"
       },
