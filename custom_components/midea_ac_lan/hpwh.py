@@ -222,6 +222,12 @@ _SETTABLE = {
     HPWH_DISINFECT_CYCLE,
     *_SWITCH_BITS,
 }
+_DEFAULT_BOUNDS: dict[str, float] = {
+    HPWH_EHEATER_ON_TEMP_MIN: -15.0,
+    HPWH_EHEATER_ON_TEMP_MAX: 44.0,
+    HPWH_RESTART_OFFSET_MIN: 2.0,
+    HPWH_RESTART_OFFSET_MAX: 40.0,
+}
 _HOURS_MAX = 23
 _CYCLE_MIN = 1
 _CYCLE_MAX = 30
@@ -678,6 +684,13 @@ def install(device: MideaDevice) -> SplitHPWHController:
     attributes: dict[str, Any] = device._attributes  # ruff: ignore[private-member-access]
     for attr in HPWH_ATTRIBUTES:
         attributes.setdefault(attr, None)
+    # The number entities read their range from these attributes as soon as
+    # they are added, which can be before the first status frame arrives.
+    # Start from the 171000AU's ranges; the unit's own values replace them
+    # on the first status frame.
+    for attr, value in _DEFAULT_BOUNDS.items():
+        if attributes.get(attr) is None:
+            attributes[attr] = value
     attributes[C3Attributes.error_code] = None
     attributes[C3Attributes.tank_actual_temperature] = None
     device.build_query = controller.build_query  # type: ignore[method-assign]
