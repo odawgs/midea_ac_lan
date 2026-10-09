@@ -106,7 +106,7 @@ if [ -n "$haPath" ]; then
 
     if [ ! -d "$ccPath/$REPO_NAME-$ver" ]; then
         error "Could not find $REPO_NAME-$ver directory" false
-        error "找不到文件夹: $REPO_NAME-$ver"
+        error "Folder not found: $REPO_NAME-$ver"
     fi
     cp -rf "$ccPath/$REPO_NAME-$ver/custom_components/$DOMAIN" "$ccPath"
 
@@ -114,17 +114,17 @@ if [ -n "$haPath" ]; then
     rm -rf "$ccPath/$ARCHIVE_TAG.zip"
     rm -rf "$ccPath/$REPO_NAME-$ver"
     info "Installation complete."
-    info "安装成功！"
+    info "Installed successfully."
     echo
     info "Remember to restart Home Assistant before you configure it."
-    info "请重启 Home Assistant"
+    info "Please restart Home Assistant"
 
 else
     echo
     error "Could not find the directory for Home Assistant" false
-    error "找不到 Home Assistant 根目录" false
+    error "Home Assistant config directory not found" false
     echo "Manually change the directory to the root of your Home Assistant configuration"
     echo "With the user that is running Home Assistant and run the script again"
-    echo "请手动进入 Home Assistant 根目录后再次执行此脚本"
+    echo "Change to the Home Assistant config directory and run this script again"
     exit 1
 fi

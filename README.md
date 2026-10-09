@@ -3,7 +3,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 [![Stable](https://img.shields.io/github/v/release/wuwentao/midea_ac_lan)](https://github.com/wuwentao/midea_ac_lan/releases/latest)
 
-English | [简体中文](README_hans.md) | [Discord Chat](https://discord.com/invite/ZWdd2fXndn) | [QQ Group](https://qm.qq.com/q/l53SGEwlZ6)
+[Discord Chat](https://discord.com/invite/ZWdd2fXndn)
 
 Control your Midea M-Smart appliances over the local network.
 
