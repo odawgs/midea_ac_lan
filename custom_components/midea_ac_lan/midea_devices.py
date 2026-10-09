@@ -83,12 +83,18 @@ from midealan.devices.x34 import DeviceAttributes as X34Attributes
 from midealan.devices.x40 import DeviceAttributes as X40Attributes
 
 from .hpwh import (
+    HPWH_AMBIENT_TEMP,
     HPWH_AUTO_DISINFECT,
     HPWH_AUX_HEATER,
+    HPWH_COIL_TEMP,
     HPWH_COMPRESSOR_ENERGY,
+    HPWH_COMPRESSOR_ENERGY_24H,
     HPWH_COMPRESSOR_FREQUENCY,
     HPWH_COMPRESSOR_HOURS,
     HPWH_COMPRESSOR_RUNNING,
+    HPWH_DC_BUS_CURRENT,
+    HPWH_DC_BUS_VOLTAGE,
+    HPWH_DISCHARGE_TEMP,
     HPWH_DISINFECT_CYCLE,
     HPWH_DISINFECT_HOUR,
     HPWH_DISINFECT_NOW,
@@ -96,17 +102,30 @@ from .hpwh import (
     HPWH_DISINFECT_TEMP,
     HPWH_EHEATER_CURRENT,
     HPWH_EHEATER_ENERGY,
+    HPWH_EHEATER_ENERGY_24H,
+    HPWH_EHEATER_HOURS,
     HPWH_EHEATER_ON_TEMP,
     HPWH_EHEATER_ON_TEMP_MAX,
     HPWH_EHEATER_ON_TEMP_MIN,
     HPWH_EHEATER_RUNNING,
     HPWH_ENERGY_COUNTER,
+    HPWH_EXV_OPENING,
+    HPWH_FAN_SPEED,
+    HPWH_FORCE_HEAT,
+    HPWH_HMI_VERSION,
+    HPWH_IDU_VERSION,
     HPWH_INPUT_POWER,
+    HPWH_MODULE_TEMP,
+    HPWH_MUTE,
+    HPWH_ODU_VERSION,
     HPWH_RESTART_OFFSET,
     HPWH_RESTART_OFFSET_MAX,
     HPWH_RESTART_OFFSET_MIN,
     HPWH_RUN_MODE,
     HPWH_RUN_MODES,
+    HPWH_SUCTION_TEMP,
+    HPWH_SUPPLY_CURRENT,
+    HPWH_SUPPLY_VOLTAGE,
     HPWH_TANK_BOTTOM_TEMP,
     HPWH_TANK_TEMP_1,
     HPWH_TANK_TEMP_2,
@@ -6027,5 +6046,157 @@ _C3_ENTITIES.update(
             (1, 30),
             unit=UnitOfTime.DAYS,
         ),
+    },
+)
+
+
+def _hpwh_diag(
+    key: str,
+    name: str,
+    *,
+    text: bool = False,
+    **extra: str | SensorDeviceClass | SensorStateClass,
+) -> dict[str, Any]:
+    """Build a diagnostic sensor that exists but is disabled until enabled.
+
+    ``extra`` carries ``unit``, ``device_class`` or ``icon``; a ``text`` sensor
+    gets no state class.
+
+    Returns
+    -------
+    The entity config dict.
+
+    """
+    config: dict[str, Any] = {
+        "type": Platform.SENSOR,
+        "translation_key": key,
+        "name": name,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
+        "models": SPLIT_HPWH_MODELS,
+        "default": True,
+        **extra,
+    }
+    if not text:
+        config["state_class"] = SensorStateClass.MEASUREMENT
+    return config
+
+
+_C3_ENTITIES.update(
+    {
+        HPWH_AMBIENT_TEMP: _hpwh_temp_sensor(HPWH_AMBIENT_TEMP, "Ambient Temperature"),
+        HPWH_EHEATER_ENERGY_24H: {
+            **_hpwh_energy_sensor(HPWH_EHEATER_ENERGY_24H, "E-heater Energy 24h"),
+            "state_class": SensorStateClass.MEASUREMENT,
+            "default": True,
+        },
+        HPWH_COMPRESSOR_ENERGY_24H: {
+            **_hpwh_energy_sensor(HPWH_COMPRESSOR_ENERGY_24H, "Compressor Energy 24h"),
+            "state_class": SensorStateClass.MEASUREMENT,
+            "default": True,
+        },
+        HPWH_EHEATER_HOURS: {
+            **_hpwh_diag(
+                HPWH_EHEATER_HOURS,
+                "E-heater Run Hours",
+                unit=UnitOfTime.HOURS,
+                icon="mdi:timer-outline",
+            ),
+            "state_class": SensorStateClass.TOTAL_INCREASING,
+        },
+        HPWH_COIL_TEMP: _hpwh_diag(
+            HPWH_COIL_TEMP,
+            "Outdoor Coil Temperature",
+            unit=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+        ),
+        HPWH_DISCHARGE_TEMP: _hpwh_diag(
+            HPWH_DISCHARGE_TEMP,
+            "Compressor Discharge Temperature",
+            unit=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+        ),
+        HPWH_SUCTION_TEMP: _hpwh_diag(
+            HPWH_SUCTION_TEMP,
+            "Compressor Suction Temperature",
+            unit=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+        ),
+        HPWH_MODULE_TEMP: _hpwh_diag(
+            HPWH_MODULE_TEMP,
+            "Inverter Module Temperature",
+            unit=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+        ),
+        HPWH_SUPPLY_VOLTAGE: _hpwh_diag(
+            HPWH_SUPPLY_VOLTAGE,
+            "Supply Voltage",
+            unit=UnitOfElectricPotential.VOLT,
+            device_class=SensorDeviceClass.VOLTAGE,
+        ),
+        HPWH_SUPPLY_CURRENT: _hpwh_diag(
+            HPWH_SUPPLY_CURRENT,
+            "Supply Current",
+            unit=UnitOfElectricCurrent.AMPERE,
+            device_class=SensorDeviceClass.CURRENT,
+        ),
+        HPWH_DC_BUS_VOLTAGE: _hpwh_diag(
+            HPWH_DC_BUS_VOLTAGE,
+            "DC Bus Voltage",
+            unit=UnitOfElectricPotential.VOLT,
+            device_class=SensorDeviceClass.VOLTAGE,
+        ),
+        HPWH_DC_BUS_CURRENT: _hpwh_diag(
+            HPWH_DC_BUS_CURRENT,
+            "DC Bus Current",
+            unit=UnitOfElectricCurrent.AMPERE,
+            device_class=SensorDeviceClass.CURRENT,
+        ),
+        HPWH_FAN_SPEED: _hpwh_diag(
+            HPWH_FAN_SPEED,
+            "Outdoor Fan Speed",
+            icon="mdi:fan",
+        ),
+        HPWH_EXV_OPENING: _hpwh_diag(
+            HPWH_EXV_OPENING,
+            "Expansion Valve Opening",
+            icon="mdi:valve",
+        ),
+        HPWH_IDU_VERSION: _hpwh_diag(
+            HPWH_IDU_VERSION,
+            "Indoor Unit Software",
+            icon="mdi:chip",
+            text=True,
+        ),
+        HPWH_ODU_VERSION: _hpwh_diag(
+            HPWH_ODU_VERSION,
+            "Outdoor Unit Software",
+            icon="mdi:chip",
+            text=True,
+        ),
+        HPWH_HMI_VERSION: _hpwh_diag(
+            HPWH_HMI_VERSION,
+            "Controller Software",
+            icon="mdi:chip",
+            text=True,
+        ),
+        HPWH_MUTE: {
+            "type": Platform.BINARY_SENSOR,
+            "translation_key": HPWH_MUTE,
+            "name": "Quiet Mode",
+            "icon": "mdi:volume-off",
+            "entity_category": EntityCategory.DIAGNOSTIC,
+            "models": SPLIT_HPWH_MODELS,
+            "default": True,
+        },
+        HPWH_FORCE_HEAT: {
+            "type": Platform.BINARY_SENSOR,
+            "translation_key": HPWH_FORCE_HEAT,
+            "name": "Force Heat",
+            "icon": "mdi:fire",
+            "entity_category": EntityCategory.DIAGNOSTIC,
+            "models": SPLIT_HPWH_MODELS,
+            "default": True,
+        },
     },
 )
