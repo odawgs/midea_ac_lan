@@ -63,6 +63,9 @@
   },
   "entity": {
     "binary_sensor": {
+      "hpwh_eheater_running": { "name": "E-heater Running" },
+      "hpwh_compressor_running": { "name": "Compressor Running" },
+      "hpwh_disinfect_running": { "name": "Disinfection Running" },
       "warm_power": {
         "name": "Warm Power"
       },
@@ -489,6 +492,11 @@
       }
     },
     "number": {
+      "hpwh_eheater_on_temp": { "name": "E-heater On Temperature" },
+      "hpwh_restart_offset": { "name": "Restart Offset" },
+      "hpwh_disinfect_hour": { "name": "Disinfection Hour" },
+      "hpwh_disinfect_temp": { "name": "Disinfection Temperature" },
+      "hpwh_disinfect_cycle": { "name": "Disinfection Cycle" },
       "heating_target_temperature": {
         "name": "Heating Target Temperature"
       },
@@ -658,8 +666,24 @@
       }
     },
     "sensor": {
+      "hpwh_run_mode": {
+        "name": "Run Mode",
+        "state": {
+          "off": "Off",
+          "run": "Running",
+          "standby": "Standby",
+          "defrost": "Defrost",
+          "antifreeze": "Antifreeze"
+        }
+      },
+      "hpwh_tank_bottom_temp": { "name": "Tank Temperature Bottom" },
+      "hpwh_eheater_energy": { "name": "E-heater Energy" },
+      "hpwh_compressor_energy": { "name": "Compressor Energy" },
+      "hpwh_eheater_current": { "name": "E-heater Current" },
+      "hpwh_compressor_frequency": { "name": "Compressor Frequency" },
+      "hpwh_compressor_hours": { "name": "Compressor Run Hours" },
       "hpwh_tank_temp_1": {
-        "name": "Tank Temperature Sensor 1"
+        "name": "Tank Temperature Upper"
       },
       "hpwh_tank_temp_2": {
         "name": "Tank Temperature Sensor 2"
@@ -669,12 +693,6 @@
       },
       "hpwh_energy_counter": {
         "name": "Energy Counter"
-      },
-      "hpwh_eheater_on_temp": {
-        "name": "E-heater On Temperature"
-      },
-      "hpwh_disinfect_hour": {
-        "name": "Disinfection Hour"
       },
       "three_way_mode": {
         "name": "Three-way Mode"
@@ -1540,6 +1558,9 @@
       }
     },
     "switch": {
+      "hpwh_aux_heater": { "name": "Auxiliary Heater" },
+      "hpwh_disinfect_now": { "name": "Disinfect Now" },
+      "hpwh_auto_disinfect": { "name": "Auto Disinfection" },
       "anion": {
         "name": "Anion"
       },

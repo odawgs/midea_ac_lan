@@ -83,10 +83,31 @@ from midealan.devices.x34 import DeviceAttributes as X34Attributes
 from midealan.devices.x40 import DeviceAttributes as X40Attributes
 
 from .hpwh import (
+    HPWH_AUTO_DISINFECT,
+    HPWH_AUX_HEATER,
+    HPWH_COMPRESSOR_ENERGY,
+    HPWH_COMPRESSOR_FREQUENCY,
+    HPWH_COMPRESSOR_HOURS,
+    HPWH_COMPRESSOR_RUNNING,
+    HPWH_DISINFECT_CYCLE,
     HPWH_DISINFECT_HOUR,
+    HPWH_DISINFECT_NOW,
+    HPWH_DISINFECT_RUNNING,
+    HPWH_DISINFECT_TEMP,
+    HPWH_EHEATER_CURRENT,
+    HPWH_EHEATER_ENERGY,
     HPWH_EHEATER_ON_TEMP,
+    HPWH_EHEATER_ON_TEMP_MAX,
+    HPWH_EHEATER_ON_TEMP_MIN,
+    HPWH_EHEATER_RUNNING,
     HPWH_ENERGY_COUNTER,
     HPWH_INPUT_POWER,
+    HPWH_RESTART_OFFSET,
+    HPWH_RESTART_OFFSET_MAX,
+    HPWH_RESTART_OFFSET_MIN,
+    HPWH_RUN_MODE,
+    HPWH_RUN_MODES,
+    HPWH_TANK_BOTTOM_TEMP,
     HPWH_TANK_TEMP_1,
     HPWH_TANK_TEMP_2,
     SPLIT_HPWH_MODELS,
@@ -5781,7 +5802,7 @@ MIDEA_DEVICES: dict[int, dict[str, dict[str, Any] | str]] = {
 
 
 # Split heat pump water heaters that report as C3 (see hpwh.py). Only the
-# water heater and the HPWH sensors below apply; hide the air-to-water entities.
+# water heater and the HPWH entities below apply; hide the air-to-water entities.
 _C3_ENTITIES = cast("dict[str, dict[str, Any]]", MIDEA_DEVICES[0xC3]["entities"])
 _C3_SPLIT_HPWH_KEEP = {"water_heater"}
 for _key, _config in _C3_ENTITIES.items():
@@ -5790,60 +5811,221 @@ for _key, _config in _C3_ENTITIES.items():
             *_config.get("excluded_devices", []),
             *((model, 0) for model in SPLIT_HPWH_MODELS),
         ]
+
+
+def _hpwh_temp_sensor(key: str, name: str, *, default: bool = True) -> dict[str, Any]:
+    return {
+        "type": Platform.SENSOR,
+        "translation_key": key,
+        "name": name,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "unit": UnitOfTemperature.CELSIUS,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "models": SPLIT_HPWH_MODELS,
+        "default": default,
+    }
+
+
+def _hpwh_energy_sensor(key: str, name: str) -> dict[str, Any]:
+    return {
+        "type": Platform.SENSOR,
+        "translation_key": key,
+        "name": name,
+        "device_class": SensorDeviceClass.ENERGY,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "models": SPLIT_HPWH_MODELS,
+    }
+
+
+def _hpwh_running(key: str, name: str, icon: str) -> dict[str, Any]:
+    return {
+        "type": Platform.BINARY_SENSOR,
+        "translation_key": key,
+        "name": name,
+        "icon": icon,
+        "device_class": BinarySensorDeviceClass.RUNNING,
+        "models": SPLIT_HPWH_MODELS,
+        "default": True,
+    }
+
+
+def _hpwh_switch(key: str, name: str, icon: str) -> dict[str, Any]:
+    return {
+        "type": Platform.SWITCH,
+        "translation_key": key,
+        "name": name,
+        "icon": icon,
+        "models": SPLIT_HPWH_MODELS,
+        "default": True,
+    }
+
+
+def _hpwh_number(
+    key: str,
+    name: str,
+    icon: str,
+    bounds: tuple[int | str, int | str],
+    **extra: str | NumberDeviceClass,
+) -> dict[str, Any]:
+    """Build a writable setting; a str bound names the attribute holding it.
+
+    Returns
+    -------
+    The entity config dict.
+
+    """
+    return {
+        "type": Platform.NUMBER,
+        "translation_key": key,
+        "name": name,
+        "icon": icon,
+        "min": bounds[0],
+        "max": bounds[1],
+        "step": 1,
+        "entity_category": EntityCategory.CONFIG,
+        "models": SPLIT_HPWH_MODELS,
+        "default": True,
+        **extra,
+    }
+
+
 _C3_ENTITIES.update(
     {
-        HPWH_TANK_TEMP_1: {
-            "type": Platform.SENSOR,
-            "translation_key": "hpwh_tank_temp_1",
-            "name": "Tank Temperature Sensor 1",
-            "device_class": SensorDeviceClass.TEMPERATURE,
-            "unit": UnitOfTemperature.CELSIUS,
-            "state_class": SensorStateClass.MEASUREMENT,
-            "models": SPLIT_HPWH_MODELS,
-        },
-        HPWH_TANK_TEMP_2: {
-            "type": Platform.SENSOR,
-            "translation_key": "hpwh_tank_temp_2",
-            "name": "Tank Temperature Sensor 2",
-            "device_class": SensorDeviceClass.TEMPERATURE,
-            "unit": UnitOfTemperature.CELSIUS,
-            "state_class": SensorStateClass.MEASUREMENT,
-            "models": SPLIT_HPWH_MODELS,
-        },
+        HPWH_TANK_TEMP_1: _hpwh_temp_sensor(HPWH_TANK_TEMP_1, "Tank Temperature Upper"),
+        HPWH_TANK_TEMP_2: _hpwh_temp_sensor(
+            HPWH_TANK_TEMP_2,
+            "Tank Temperature Sensor 2",
+            default=False,
+        ),
+        HPWH_TANK_BOTTOM_TEMP: _hpwh_temp_sensor(
+            HPWH_TANK_BOTTOM_TEMP,
+            "Tank Temperature Bottom",
+        ),
         HPWH_INPUT_POWER: {
             "type": Platform.SENSOR,
-            "translation_key": "hpwh_input_power",
+            "translation_key": HPWH_INPUT_POWER,
             "name": "Input Power",
             "device_class": SensorDeviceClass.POWER,
             "unit": UnitOfPower.WATT,
             "state_class": SensorStateClass.MEASUREMENT,
             "models": SPLIT_HPWH_MODELS,
+            "default": True,
         },
-        HPWH_ENERGY_COUNTER: {
+        HPWH_ENERGY_COUNTER: _hpwh_energy_sensor(HPWH_ENERGY_COUNTER, "Energy Counter"),
+        HPWH_EHEATER_ENERGY: _hpwh_energy_sensor(
+            HPWH_EHEATER_ENERGY,
+            "E-heater Energy",
+        ),
+        HPWH_COMPRESSOR_ENERGY: _hpwh_energy_sensor(
+            HPWH_COMPRESSOR_ENERGY,
+            "Compressor Energy",
+        ),
+        HPWH_EHEATER_CURRENT: {
             "type": Platform.SENSOR,
-            "translation_key": "hpwh_energy_counter",
-            "name": "Energy Counter",
-            "device_class": SensorDeviceClass.ENERGY,
-            "unit": UnitOfEnergy.KILO_WATT_HOUR,
+            "translation_key": HPWH_EHEATER_CURRENT,
+            "name": "E-heater Current",
+            "device_class": SensorDeviceClass.CURRENT,
+            "unit": UnitOfElectricCurrent.AMPERE,
+            "state_class": SensorStateClass.MEASUREMENT,
+            "entity_category": EntityCategory.DIAGNOSTIC,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_COMPRESSOR_FREQUENCY: {
+            "type": Platform.SENSOR,
+            "translation_key": HPWH_COMPRESSOR_FREQUENCY,
+            "name": "Compressor Frequency",
+            "icon": "mdi:sine-wave",
+            "unit": UnitOfFrequency.HERTZ,
+            "state_class": SensorStateClass.MEASUREMENT,
+            "entity_category": EntityCategory.DIAGNOSTIC,
+            "models": SPLIT_HPWH_MODELS,
+        },
+        HPWH_COMPRESSOR_HOURS: {
+            "type": Platform.SENSOR,
+            "translation_key": HPWH_COMPRESSOR_HOURS,
+            "name": "Compressor Run Hours",
+            "icon": "mdi:timer-outline",
+            "unit": UnitOfTime.HOURS,
             "state_class": SensorStateClass.TOTAL_INCREASING,
-            "models": SPLIT_HPWH_MODELS,
-        },
-        HPWH_EHEATER_ON_TEMP: {
-            "type": Platform.SENSOR,
-            "translation_key": "hpwh_eheater_on_temp",
-            "name": "E-heater On Temperature",
-            "device_class": SensorDeviceClass.TEMPERATURE,
-            "unit": UnitOfTemperature.CELSIUS,
             "entity_category": EntityCategory.DIAGNOSTIC,
             "models": SPLIT_HPWH_MODELS,
         },
-        HPWH_DISINFECT_HOUR: {
+        HPWH_RUN_MODE: {
             "type": Platform.SENSOR,
-            "translation_key": "hpwh_disinfect_hour",
-            "name": "Disinfection Hour",
-            "icon": "mdi:water-plus-outline",
-            "entity_category": EntityCategory.DIAGNOSTIC,
+            "translation_key": HPWH_RUN_MODE,
+            "name": "Run Mode",
+            "icon": "mdi:heat-pump-outline",
+            "device_class": SensorDeviceClass.ENUM,
+            "options": HPWH_RUN_MODES,
             "models": SPLIT_HPWH_MODELS,
+            "default": True,
         },
+        HPWH_EHEATER_RUNNING: _hpwh_running(
+            HPWH_EHEATER_RUNNING,
+            "E-heater Running",
+            "mdi:radiator",
+        ),
+        HPWH_COMPRESSOR_RUNNING: _hpwh_running(
+            HPWH_COMPRESSOR_RUNNING,
+            "Compressor Running",
+            "mdi:heat-pump",
+        ),
+        HPWH_DISINFECT_RUNNING: _hpwh_running(
+            HPWH_DISINFECT_RUNNING,
+            "Disinfection Running",
+            "mdi:water-plus",
+        ),
+        HPWH_AUX_HEATER: _hpwh_switch(
+            HPWH_AUX_HEATER,
+            "Auxiliary Heater",
+            "mdi:radiator",
+        ),
+        HPWH_DISINFECT_NOW: _hpwh_switch(
+            HPWH_DISINFECT_NOW,
+            "Disinfect Now",
+            "mdi:water-plus",
+        ),
+        HPWH_AUTO_DISINFECT: _hpwh_switch(
+            HPWH_AUTO_DISINFECT,
+            "Auto Disinfection",
+            "mdi:calendar-sync",
+        ),
+        HPWH_EHEATER_ON_TEMP: _hpwh_number(
+            HPWH_EHEATER_ON_TEMP,
+            "E-heater On Temperature",
+            "mdi:thermometer-low",
+            (HPWH_EHEATER_ON_TEMP_MIN, HPWH_EHEATER_ON_TEMP_MAX),
+            unit=UnitOfTemperature.CELSIUS,
+            device_class=NumberDeviceClass.TEMPERATURE,
+        ),
+        HPWH_RESTART_OFFSET: _hpwh_number(
+            HPWH_RESTART_OFFSET,
+            "Restart Offset",
+            "mdi:thermometer-minus",
+            (HPWH_RESTART_OFFSET_MIN, HPWH_RESTART_OFFSET_MAX),
+            unit=UnitOfTemperature.CELSIUS,
+        ),
+        HPWH_DISINFECT_HOUR: _hpwh_number(
+            HPWH_DISINFECT_HOUR,
+            "Disinfection Hour",
+            "mdi:clock-outline",
+            (0, 23),
+        ),
+        HPWH_DISINFECT_TEMP: _hpwh_number(
+            HPWH_DISINFECT_TEMP,
+            "Disinfection Temperature",
+            "mdi:thermometer-high",
+            (55, C3Attributes.dhw_temp_max),
+            unit=UnitOfTemperature.CELSIUS,
+            device_class=NumberDeviceClass.TEMPERATURE,
+        ),
+        HPWH_DISINFECT_CYCLE: _hpwh_number(
+            HPWH_DISINFECT_CYCLE,
+            "Disinfection Cycle",
+            "mdi:calendar-refresh",
+            (1, 30),
+            unit=UnitOfTime.DAYS,
+        ),
     },
 )
