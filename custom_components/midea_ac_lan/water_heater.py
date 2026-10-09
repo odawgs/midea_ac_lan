@@ -34,7 +34,6 @@ from midealan.devices.e6 import DeviceAttributes as E6Attributes
 from midealan.devices.e6 import MideaE6Device
 
 from .const import DEVICES, DOMAIN, supports_device
-from .hpwh import is_split_hpwh
 from .midea_devices import MIDEA_DEVICES
 from .midea_entity import MideaEntity
 
@@ -292,9 +291,6 @@ class MideaC3WaterHeater(MideaWaterHeater):
     @property
     def supported_features(self) -> WaterHeaterEntityFeature:
         """Midea C3 Water Heater supported features."""
-        if is_split_hpwh(self._device):
-            # Read-only: the C3 set messages don't fit this model (see hpwh.py).
-            return WaterHeaterEntityFeature(0)
         # C3 implements turn_on/turn_off (dhw_power) and reports on/off state,
         # so advertise ON_OFF to self-document that support (matches E2).
         return (
