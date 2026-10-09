@@ -75,7 +75,7 @@ uv --version
 Clone the repository and run the setup script:
 
 ```bash
-git clone https://github.com/wuwentao/midea_ac_lan.git
+git clone https://github.com/odawgs/midea_ac_lan.git
 cd midea_ac_lan
 ./scripts/setup.sh
 ```
