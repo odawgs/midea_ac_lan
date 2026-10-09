@@ -163,6 +163,7 @@ _SETTABLE = {
 _HOURS_MAX = 23
 _CYCLE_MIN = 1
 _CYCLE_MAX = 30
+_DISINFECT_TEMP_MIN_RAW = 55 + _TEMP_OFFSET
 
 
 def is_split_hpwh(device: MideaDevice) -> bool:
@@ -357,7 +358,12 @@ class SplitHPWHController:
         """Attach to a midealan C3 device."""
         self._device = device
         self._attributes: dict[str, Any] = device._attributes  # ruff: ignore[private-member-access]
+        # Bounds from the last status frame (raw bytes) and the settings
+        # block in CONTROL layout, kept current from status frames, control
+        # echoes and the bodies this controller sends, so two changes inside
+        # one poll interval don't revert each other.
         self._last_basic: bytes | None = None
+        self._settings: bytearray | None = None
         self._mute_level = 0
         self._mute_force_heat = 0
 
@@ -393,12 +399,44 @@ class SplitHPWHController:
                 and len(body) >= _BASIC_MIN_LEN
             ):
                 self._last_basic = bytes(body)
+                self._settings = self._settings_from_status(body)
+            elif (
+                body[0] == _BODY_BASIC
+                and msg_type == MessageType.set
+                and len(body) >= _CONTROL_ECHO_MIN_LEN
+                and self._settings is not None
+            ):
+                self._settings[2:19] = body[2:19]
             elif body[0] == _BODY_RUNPARA1 and len(body) >= _RUNPARA1_MIN_LEN:
                 self._mute_level = body[41]
                 self._mute_force_heat = body[42] & 0x03
         new_status = decode_frame(msg)
         self._attributes.update(new_status)
         return {str(attr): value for attr, value in new_status.items()}
+
+    def _settings_from_status(self, status: bytes) -> bytearray:
+        """Rearrange a status body into the control layout.
+
+        Returns
+        -------
+        A 51-byte control body echoing every setting the status reports.
+
+        """
+        body = bytearray(_CONTROL_BODY_LEN)
+        body[0] = _BODY_BASIC
+        body[1] = 0x01
+        body[2] = status[2]
+        body[3] = status[3]
+        body[4] = status[18]
+        body[5] = status[19]
+        body[6:10] = status[20:24]
+        body[10:14] = status[26:30]
+        body[14] = status[30]
+        body[15] = self._mute_level
+        body[16] = self._mute_force_heat
+        body[17] = status[24]
+        body[18] = status[25]
+        return body
 
     def build_control_body(self, attr: str, value: Any) -> bytearray:  # ruff: ignore[any-type]
         """Build the 51-byte control body for one changed setting.
@@ -414,23 +452,12 @@ class SplitHPWHController:
 
         """
         status = self._last_basic
-        if status is None:
+        if status is None or self._settings is None:
             msg = "no status received from the water heater yet"
             raise ValueError(msg)
-        body = bytearray(_CONTROL_BODY_LEN)
-        body[0] = _BODY_BASIC
-        body[1] = 0x01
-        body[2] = status[2]
-        body[3] = status[3]
-        body[4] = status[18]
-        body[5] = status[19]
-        body[6:10] = status[20:24]
-        body[10:14] = status[26:30]
-        body[14] = status[30]
+        body = bytearray(self._settings)
         body[15] = self._mute_level
         body[16] = self._mute_force_heat
-        body[17] = status[24]
-        body[18] = status[25]
 
         if attr == C3Attributes.dhw_power:
             body[2] = _MODE_DHW if value else _MODE_OFF
@@ -446,7 +473,8 @@ class SplitHPWHController:
         elif attr == HPWH_DISINFECT_HOUR:
             body[6] = min(max(int(value), 0), _HOURS_MAX)
         elif attr == HPWH_DISINFECT_TEMP:
-            body[8] = self._encode_temp(value, status[3], status[4])
+            # The app offers 55 °C up to the set point maximum.
+            body[8] = self._encode_temp(value, _DISINFECT_TEMP_MIN_RAW, status[4])
         elif attr == HPWH_DISINFECT_CYCLE:
             body[9] = min(max(int(value), _CYCLE_MIN), _CYCLE_MAX)
         elif attr in _SWITCH_BITS:
@@ -489,6 +517,8 @@ class SplitHPWHController:
             body.hex(),
         )
         self._device.build_send(message)
+        # Assume the unit accepts it; the echo and the next poll correct us.
+        self._settings = bytearray(body)
 
 
 def install(device: MideaDevice) -> SplitHPWHController:
