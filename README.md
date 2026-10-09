@@ -7,7 +7,7 @@ Local Home Assistant control of the **Midea MHW-V28WD2N7 split heat pump water h
 
 The unit reports as Midea device type `C3` but speaks a different protocol from the air-to-water heat pumps that type normally means. With the original integration it shows up as two climate zones, a tank at 98 °C and error code 7. Here it gets a working water heater entity plus the sensors, switches and settings the Midea app offers, all over the local network. The MSmartHome app keeps working alongside Home Assistant.
 
-> **Scope of this fork:** the split heat pump water heater is the **only device maintained here**. All other appliances (air conditioners, dehumidifiers, washers and so on) are an unmodified copy of upstream at v2026.9.2 and are not tested, updated or supported in this fork. For any other Midea appliance use [wuwentao/midea_ac_lan](https://github.com/wuwentao/midea_ac_lan) and report problems there. This fork is provided as is, with no support channel.
+> **Scope of this fork:** the split heat pump water heater is the **only device maintained here**. All other appliances (air conditioners, dehumidifiers, washers and so on) are an unmodified copy of upstream at v2026.9.2 and are not tested, updated or supported in this fork. For any other Midea appliance use [wuwentao/midea_ac_lan](https://github.com/wuwentao/midea_ac_lan) and report problems there. This fork is provided as is: issues are disabled, there is no support channel, and nothing here is promised to be fixed. If it does not work for your unit, fork it and adjust it to your needs.
 
 ## Is this your unit?
 

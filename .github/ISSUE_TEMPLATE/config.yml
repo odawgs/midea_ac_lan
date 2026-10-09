@@ -1,6 +1,0 @@
----
-blank_issues_enabled: true
-contact_links:
-  - name: Any Midea appliance other than the split heat pump water heater (171000AU)
-    url: https://github.com/wuwentao/midea_ac_lan/issues
-    about: This fork only maintains the MHW-V28WD2N7 / 171000AU water heater. Report everything else to the original project.
