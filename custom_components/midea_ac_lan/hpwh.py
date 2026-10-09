@@ -167,6 +167,19 @@ HPWH_ATTRIBUTES = [
     HPWH_RESTART_OFFSET_MAX,
 ]
 
+# Attributes the water heater entity exposes for a split HPWH; the rest of the
+# C3 air-to-water attributes are never populated on these units.
+SPLIT_HPWH_WATER_HEATER_ATTRIBUTES = {
+    str(C3Attributes.dhw_power),
+    str(C3Attributes.dhw_target_temp),
+    str(C3Attributes.dhw_temp_min),
+    str(C3Attributes.dhw_temp_max),
+    str(C3Attributes.tank_actual_temperature),
+    str(C3Attributes.error_code),
+    *HPWH_ATTRIBUTES,
+    "target_temperature_step",
+}
+
 HPWH_RUN_MODES = {0: "off", 1: "run", 2: "standby", 3: "defrost", 4: "antifreeze"}
 
 _FRAME_START = 0xAA
