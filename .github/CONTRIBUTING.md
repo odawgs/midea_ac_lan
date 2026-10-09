@@ -1,6 +1,4 @@
-# Contributing Guide (English Version)
-
-> [中文版点这里 / Chinese Version](./CONTRIBUTING.zh.md)
+# Contributing Guide
 
 Thank you for contributing to this project!
 This guide explains how to set up your development environment with **[uv](https://docs.astral.sh/uv/)** and how to contribute code following our workflow and style rules.
@@ -211,10 +209,3 @@ When opening Issues:
 
 - Include steps to reproduce, logs, and your environment info.
 - Be respectful, concise, and follow community guidelines.
-
----
-
-**File Path:**
-
-- English: `.github/CONTRIBUTING.md`
-- Chinese: `.github/CONTRIBUTING.zh.md`

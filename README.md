@@ -1,9 +1,9 @@
-# Midea AC LAN
+# Midea AC LAN for Home Assistant, with Midea split heat pump water heater (MHW-V28WD2N7 / 171000AU) support
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
-[![Stable](https://img.shields.io/github/v/release/wuwentao/midea_ac_lan)](https://github.com/wuwentao/midea_ac_lan/releases/latest)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![Stable](https://img.shields.io/github/v/release/odawgs/midea_ac_lan?include_prereleases)](https://github.com/odawgs/midea_ac_lan/releases/latest)
 
-English | [简体中文](README_hans.md) | [Discord Chat](https://discord.com/invite/ZWdd2fXndn) | [QQ Group](https://qm.qq.com/q/l53SGEwlZ6)
+[Discord Chat](https://discord.com/invite/ZWdd2fXndn)
 
 Control your Midea M-Smart appliances over the local network.
 
@@ -18,6 +18,17 @@ Control your Midea M-Smart appliances over the local network.
 ## About this fork
 
 This is a fork of [wuwentao/midea_ac_lan](https://github.com/wuwentao/midea_ac_lan) that adds full support for the **Midea split heat pump water heater MHW-V28WD2N7** (model code `171000AU`), which reports as device type `C3` but uses a different protocol from the air-to-water units. With the upstream integration this unit shows two climate zones, a tank at 98 °C and error code 7; here it gets a working water heater entity with on/off and target temperature, tank temperatures, power, run mode, compressor / backup heater / disinfection status, and the disinfection and backup heater settings. See [doc/C3.md](doc/C3.md#split-heat-pump-water-heater-model-171000au).
+
+> **Scope of this fork:** the Midea split heat pump water heater (MHW-V28WD2N7, model code `171000AU`) is the **only device maintained here**. All other appliances (air conditioners, dehumidifiers, washers and so on) are an unmodified copy of upstream at v2026.9.2 and are not tested, updated or supported in this fork. For any other Midea appliance, use [wuwentao/midea_ac_lan](https://github.com/wuwentao/midea_ac_lan) and report issues there.
+
+**Is this your unit?** It goes by several names, so if you searched for any of these you are in the right place:
+
+- Midea **MHW-V28WD2N7** split heat pump water heater / heat pump hot water system (sold in Australia)
+- **Split HPWH** in the Midea **MSmartHome** app
+- Model code **171000AU**, shown in Home Assistant as _Heat Pump Wi-Fi Controller 171000AU_ or _Central Heating Water Heater_, device type **C3** (`0xC3`)
+- Symptoms with the standard Midea AC LAN integration: tank temperature stuck at **98 °C**, **error code 7** (_E6: Ambient temp. sensor (T4) fault_), a water heater that is always `off` with a 20 °C target, and two heating zones that do not exist
+
+Everything is local (LAN) control: no cloud polling once the device is added, and the MSmartHome app keeps working alongside Home Assistant.
 
 To install this fork, add `https://github.com/odawgs/midea_ac_lan` as a custom repository in HACS (type: Integration), download **Midea AC LAN** from that repository instead of the upstream one, and restart Home Assistant. Everything else in this README applies unchanged.
 
