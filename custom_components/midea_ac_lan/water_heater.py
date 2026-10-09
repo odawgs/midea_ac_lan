@@ -34,6 +34,7 @@ from midealan.devices.e6 import DeviceAttributes as E6Attributes
 from midealan.devices.e6 import MideaE6Device
 
 from .const import DEVICES, DOMAIN, supports_device
+from .hpwh import SPLIT_HPWH_WATER_HEATER_ATTRIBUTES, is_split_hpwh
 from .midea_devices import MIDEA_DEVICES
 from .midea_entity import MideaEntity
 
@@ -287,6 +288,24 @@ class MideaC3WaterHeater(MideaWaterHeater):
     def __init__(self, device: MideaC3Device, entity_key: str) -> None:
         """Midea C3 Water Heater entity init."""
         super().__init__(device, entity_key)
+        self._split_hpwh = is_split_hpwh(device)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Midea C3 Water Heater extra state attributes.
+
+        A split heat pump water heater never populates the air-to-water
+        attributes (zones, curves, room temperatures), so only its own
+        attributes are exposed.
+        """
+        attrs = super().extra_state_attributes
+        if not self._split_hpwh:
+            return attrs
+        return {
+            key: value
+            for key, value in attrs.items()
+            if key in SPLIT_HPWH_WATER_HEATER_ATTRIBUTES
+        }
 
     @property
     def supported_features(self) -> WaterHeaterEntityFeature:

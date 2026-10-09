@@ -6050,6 +6050,26 @@ _C3_ENTITIES.update(
 )
 
 
+def _hpwh_window_energy(key: str, name: str) -> dict[str, Any]:
+    """Build a rolling-window energy sensor (kWh, no energy device class).
+
+    Returns
+    -------
+    The entity config dict.
+
+    """
+    return {
+        "type": Platform.SENSOR,
+        "translation_key": key,
+        "name": name,
+        "icon": "mdi:lightning-bolt",
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "models": SPLIT_HPWH_MODELS,
+        "default": True,
+    }
+
+
 def _hpwh_diag(
     key: str,
     name: str,
@@ -6085,16 +6105,17 @@ def _hpwh_diag(
 _C3_ENTITIES.update(
     {
         HPWH_AMBIENT_TEMP: _hpwh_temp_sensor(HPWH_AMBIENT_TEMP, "Ambient Temperature"),
-        HPWH_EHEATER_ENERGY_24H: {
-            **_hpwh_energy_sensor(HPWH_EHEATER_ENERGY_24H, "E-heater Energy 24h"),
-            "state_class": SensorStateClass.MEASUREMENT,
-            "default": True,
-        },
-        HPWH_COMPRESSOR_ENERGY_24H: {
-            **_hpwh_energy_sensor(HPWH_COMPRESSOR_ENERGY_24H, "Compressor Energy 24h"),
-            "state_class": SensorStateClass.MEASUREMENT,
-            "default": True,
-        },
+        # A rolling 24 h window is neither total nor total_increasing, and HA
+        # rejects "measurement" with the energy device class, so these carry
+        # the kWh unit without a device class.
+        HPWH_EHEATER_ENERGY_24H: _hpwh_window_energy(
+            HPWH_EHEATER_ENERGY_24H,
+            "E-heater Energy 24h",
+        ),
+        HPWH_COMPRESSOR_ENERGY_24H: _hpwh_window_energy(
+            HPWH_COMPRESSOR_ENERGY_24H,
+            "Compressor Energy 24h",
+        ),
         HPWH_EHEATER_HOURS: {
             **_hpwh_diag(
                 HPWH_EHEATER_HOURS,
