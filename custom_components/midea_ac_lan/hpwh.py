@@ -118,6 +118,7 @@ HPWH_EHEATER_ON_TEMP_MIN = "hpwh_eheater_on_temp_min"
 HPWH_EHEATER_ON_TEMP_MAX = "hpwh_eheater_on_temp_max"
 HPWH_RESTART_OFFSET_MIN = "hpwh_restart_offset_min"
 HPWH_RESTART_OFFSET_MAX = "hpwh_restart_offset_max"
+HPWH_DISINFECT_TEMP_MAX = "hpwh_disinfect_temp_max"
 
 HPWH_ATTRIBUTES = [
     HPWH_TANK_TEMP_1,
@@ -165,6 +166,7 @@ HPWH_ATTRIBUTES = [
     HPWH_EHEATER_ON_TEMP_MAX,
     HPWH_RESTART_OFFSET_MIN,
     HPWH_RESTART_OFFSET_MAX,
+    HPWH_DISINFECT_TEMP_MAX,
 ]
 
 # Attributes the water heater entity exposes for a split HPWH; the rest of the
@@ -227,6 +229,7 @@ _DEFAULT_BOUNDS: dict[str, float] = {
     HPWH_EHEATER_ON_TEMP_MAX: 44.0,
     HPWH_RESTART_OFFSET_MIN: 2.0,
     HPWH_RESTART_OFFSET_MAX: 40.0,
+    HPWH_DISINFECT_TEMP_MAX: 63.0,
 }
 _HOURS_MAX = 23
 _CYCLE_MIN = 1
@@ -374,11 +377,12 @@ def _decode_basic(body: bytes) -> dict[str, Any]:
         HPWH_EHEATER_ON_TEMP: _temp(body[18]),
         HPWH_RESTART_OFFSET: _temp(body[19]),
         HPWH_DISINFECT_HOUR: body[20],
-        # The app shows the stored value capped at the set point maximum
-        # (a new unit stores 63 with a 60 maximum); mirror that so the number
-        # entity never sits above its own range. Control frames echo the raw
-        # byte from the settings cache, not this value.
-        HPWH_DISINFECT_TEMP: min(_temp(body[22]), _temp(body[4])),
+        # Report the stored value as is. The app caps the display at the set
+        # point maximum (a new unit stores 63 with a 60 maximum), but the unit
+        # really heats until the bottom probe reaches the stored value, so the
+        # cap hid what the cycle does. The number entity's range follows it.
+        HPWH_DISINFECT_TEMP: _temp(body[22]),
+        HPWH_DISINFECT_TEMP_MAX: max(_temp(body[22]), _temp(body[4])),
         HPWH_DISINFECT_CYCLE: body[23],
         HPWH_AUX_HEATER: bool(switches & _SW_AUX_HEATER),
         HPWH_DISINFECT_NOW: bool(switches & _SW_DISINFECT_NOW),
@@ -556,12 +560,6 @@ class SplitHPWHController:
                     _RUNPARA1_MUTE | _RUNPARA1_FORCE_HEAT
                 )
         new_status = decode_frame(msg)
-        if HPWH_DISINFECT_TEMP in new_status and self._last_basic is not None:
-            # Control echoes carry no range; apply the same cap as the status.
-            new_status[HPWH_DISINFECT_TEMP] = min(
-                new_status[HPWH_DISINFECT_TEMP],
-                _temp(self._last_basic[4]),
-            )
         self._attributes.update(new_status)
         return {str(attr): value for attr, value in new_status.items()}
 
@@ -624,8 +622,14 @@ class SplitHPWHController:
         elif attr == HPWH_DISINFECT_HOUR:
             body[6] = min(max(int(value), 0), _HOURS_MAX)
         elif attr == HPWH_DISINFECT_TEMP:
-            # The app offers 55 °C up to the set point maximum.
-            body[8] = self._encode_temp(value, _DISINFECT_TEMP_MIN_RAW, status[4])
+            # The app offers 55 °C up to the set point maximum; also allow the
+            # value the unit already holds (63 from the factory) so re-sending
+            # it does not lower the setting for good.
+            body[8] = self._encode_temp(
+                value,
+                _DISINFECT_TEMP_MIN_RAW,
+                max(status[4], status[22]),
+            )
         elif attr == HPWH_DISINFECT_CYCLE:
             body[9] = min(max(int(value), _CYCLE_MIN), _CYCLE_MAX)
         elif attr in _SWITCH_BITS:
